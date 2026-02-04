@@ -1,8 +1,8 @@
-# mcp-polymarket
+# @c0pilot/mcp-polymarket
 
 MCP (Model Context Protocol) server and client library for [Polymarket](https://polymarket.com) prediction markets.
 
-[![npm version](https://badge.fury.io/js/mcp-polymarket.svg)](https://www.npmjs.com/package/mcp-polymarket)
+[![npm version](https://badge.fury.io/js/@c0pilot/mcp-polymarket.svg)](https://www.npmjs.com/package/@c0pilot/mcp-polymarket)
 
 ## Features
 
@@ -17,7 +17,7 @@ MCP (Model Context Protocol) server and client library for [Polymarket](https://
 ## Installation
 
 ```bash
-npm install mcp-polymarket
+npm install @c0pilot/mcp-polymarket
 ```
 
 ## Usage
@@ -115,16 +115,16 @@ Your "funder" is your Polymarket proxy wallet - the address shown on polymarket.
 
 ```typescript
 // Main MCP server entry
-import mcp from 'mcp-polymarket';
+import mcp from '@c0pilot/mcp-polymarket';
 
 // Client wrapper for Polymarket CLOB
-import { ClobClientWrapper } from 'mcp-polymarket/client';
+import { ClobClientWrapper } from '@c0pilot/mcp-polymarket/client';
 
 // Configuration utilities
-import { createConfig, loadConfig, Config } from 'mcp-polymarket/config';
+import { createConfig, getConfig, Config } from '@c0pilot/mcp-polymarket/config';
 
 // Type definitions
-import { MarketInfo, OrderbookInfo, Position } from 'mcp-polymarket/types';
+import { MarketInfo, OrderbookInfo, Position } from '@c0pilot/mcp-polymarket/types';
 ```
 
 ## Security
@@ -152,7 +152,8 @@ npm run test:e2e
 
 ## Related
 
-- [@openclaw/polymarket](https://github.com/unsanction/openclaw-polymarket) - OpenClaw plugin using this library
+- [@c0pilot/openclaw-polymarket](https://www.npmjs.com/package/@c0pilot/openclaw-polymarket) - OpenClaw plugin using this library
+- [GitHub](https://github.com/unsanction/mcp-polymarket)
 
 ## License
 
