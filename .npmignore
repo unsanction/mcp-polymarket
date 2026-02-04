@@ -1,0 +1,22 @@
+# Source files (we publish build/)
+src/
+tests/
+
+# Config files
+.env
+.env.*
+.gitignore
+tsconfig.json
+vitest.config.ts
+
+# IDE
+.idea/
+.vscode/
+.claude/
+
+# OS
+.DS_Store
+
+# Misc
+*.log
+coverage/

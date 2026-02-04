@@ -1,27 +1,69 @@
 {
-  "name": "mcp-polymarket",
+  "name": "@c0pilot/mcp-polymarket",
   "version": "1.0.0",
+  "description": "MCP server and client library for Polymarket prediction markets - trade, browse markets, manage positions",
   "type": "module",
   "main": "./build/index.js",
+  "types": "./build/index.d.ts",
   "exports": {
-    ".": "./build/index.js",
-    "./client": "./build/client.js",
-    "./config": "./build/config.js",
-    "./types": "./build/types.js"
+    ".": {
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    },
+    "./client": {
+      "types": "./build/client.d.ts",
+      "default": "./build/client.js"
+    },
+    "./config": {
+      "types": "./build/config.d.ts",
+      "default": "./build/config.js"
+    },
+    "./types": {
+      "types": "./build/types.d.ts",
+      "default": "./build/types.js"
+    }
   },
   "bin": {
     "mcp-polymarket": "./build/index.js"
   },
+  "files": [
+    "build",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc && chmod 755 build/index.js",
     "start": "node build/index.js",
     "test": "vitest run",
-    "test:e2e": "vitest run e2e"
+    "test:e2e": "vitest run e2e",
+    "clean": "rm -rf build",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "polymarket",
+    "prediction-markets",
+    "trading",
+    "crypto",
+    "clob",
+    "model-context-protocol"
+  ],
+  "author": "unsanction",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/unsanction/mcp-polymarket"
+  },
+  "homepage": "https://github.com/unsanction/mcp-polymarket#readme",
+  "bugs": {
+    "url": "https://github.com/unsanction/mcp-polymarket/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@polymarket/clob-client": "^5.2.1",
-    "ethers": "^5.7.2",
+    "ethers": "^6.16.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {

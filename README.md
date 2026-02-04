@@ -1,53 +1,30 @@
-# MCP Polymarket Server
+# mcp-polymarket
 
-An MCP (Model Context Protocol) server that enables AI agents to trade on Polymarket via the CLOB API.
+MCP (Model Context Protocol) server and client library for [Polymarket](https://polymarket.com) prediction markets.
+
+[![npm version](https://badge.fury.io/js/mcp-polymarket.svg)](https://www.npmjs.com/package/mcp-polymarket)
 
 ## Features
 
+- **MCP Server**: Run as a standalone MCP server for AI agents
+- **Client Library**: Import and use in your own projects
 - Browse and search prediction markets
 - View order books and market prices
 - Check wallet balance and positions
-- Place and cancel orders (with readonly mode option)
+- Place and cancel orders
 - Full integration with Polymarket's CLOB API
 
 ## Installation
 
 ```bash
-npm install
-npm run build
+npm install mcp-polymarket
 ```
-
-## Configuration
-
-Copy `.env.example` to `.env` and configure:
-
-```bash
-cp .env.example .env
-```
-
-### Environment Variables
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `POLYMARKET_PRIVATE_KEY` | Yes | - | Ethereum private key for signing |
-| `POLYMARKET_API_KEY` | No* | - | API key (auto-derived if not set) |
-| `POLYMARKET_API_SECRET` | No* | - | API secret (auto-derived if not set) |
-| `POLYMARKET_PASSPHRASE` | No* | - | API passphrase (auto-derived if not set) |
-| `POLYMARKET_FUNDER` | No | - | Funder address (derived from private key) |
-| `POLYMARKET_CHAIN_ID` | No | 137 | Polygon mainnet |
-| `POLYMARKET_READONLY` | No | false | Disable trading tools |
-
-*If API credentials are not provided, they will be derived from the private key on first run.
 
 ## Usage
 
-### Running the Server
+### As MCP Server
 
-```bash
-npm start
-```
-
-### Claude Desktop Integration
+#### With Claude Desktop
 
 Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json`):
 
@@ -55,81 +32,127 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
 {
   "mcpServers": {
     "polymarket": {
-      "command": "node",
-      "args": ["/path/to/mcp-polymarket/build/index.js"],
+      "command": "npx",
+      "args": ["mcp-polymarket"],
       "env": {
-        "POLYMARKET_PRIVATE_KEY": "your_private_key_here"
+        "POLYMARKET_PRIVATE_KEY": "0x...",
+        "POLYMARKET_FUNDER": "0x..."
       }
     }
   }
 }
 ```
 
-## Available Tools
+#### Standalone
 
-### Market Information
+```bash
+export POLYMARKET_PRIVATE_KEY="0x..."
+export POLYMARKET_FUNDER="0x..."
+npx mcp-polymarket
+```
 
-#### `polymarket_get_markets`
-List available prediction markets on Polymarket.
+### As Library
 
-**Parameters:**
-- `limit` (optional): Number of markets to return (1-100, default: 10)
-- `offset` (optional): Pagination offset (default: 0)
-- `search` (optional): Search term to filter markets
+```typescript
+import { ClobClientWrapper } from 'mcp-polymarket/client';
+import { createConfig } from 'mcp-polymarket/config';
 
-#### `polymarket_get_market`
-Get detailed information about a specific market.
+// Create config
+const config = createConfig({
+  privateKey: '0x...',
+  funder: '0x...',      // optional
+  readonly: false,       // optional
+});
 
-**Parameters:**
-- `condition_id` (required): The market's condition ID
+// Initialize client
+const client = new ClobClientWrapper(config);
+await client.initialize();
 
-#### `polymarket_get_orderbook`
-Get the order book for a specific token.
+// Use the client
+const clobClient = client.getClient();
+const orderbook = await clobClient.getOrderBook(tokenId);
+```
 
-**Parameters:**
-- `token_id` (required): The token ID (Yes or No outcome)
+## Configuration
 
-### Account Information
+### Environment Variables
 
-#### `polymarket_get_balance`
-Get USDC balance and allowance for the configured wallet.
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `POLYMARKET_PRIVATE_KEY` | Yes | - | Wallet private key for signing |
+| `POLYMARKET_FUNDER` | No | derived | Proxy wallet address |
+| `POLYMARKET_API_KEY` | No | derived | API key (auto-derived if not set) |
+| `POLYMARKET_API_SECRET` | No | derived | API secret (auto-derived if not set) |
+| `POLYMARKET_PASSPHRASE` | No | derived | API passphrase (auto-derived if not set) |
+| `POLYMARKET_CHAIN_ID` | No | 137 | Polygon mainnet |
+| `POLYMARKET_READONLY` | No | false | Disable trading tools |
 
-**Parameters:** None
+### Finding Your Funder Address
 
-#### `polymarket_get_positions`
-Get all open orders and positions with P&L calculations.
+Your "funder" is your Polymarket proxy wallet - the address shown on polymarket.com when logged in. If you deposited through Polymarket's UI, funds are in this proxy wallet.
 
-**Parameters:** None
+## Available MCP Tools
 
-### Trading (disabled in readonly mode)
+### Read-Only
 
-#### `polymarket_place_order`
-Place a limit order on Polymarket.
+| Tool | Description |
+|------|-------------|
+| `polymarket_get_markets` | List active prediction markets |
+| `polymarket_get_market` | Get details for a specific market |
+| `polymarket_get_orderbook` | View order book for a token |
+| `polymarket_get_balance` | Check wallet USDC balance |
+| `polymarket_get_positions` | View open orders and positions |
+| `polymarket_get_trades` | Get recent trade history |
 
-**Parameters:**
-- `token_id` (required): Token ID to trade
-- `side` (required): "BUY" or "SELL"
-- `size` (required): Order size in shares
-- `price` (required): Limit price (0-1)
+### Trading
 
-#### `polymarket_cancel_order`
-Cancel an existing order.
+| Tool | Description |
+|------|-------------|
+| `polymarket_place_order` | Place a limit order (BUY/SELL) |
+| `polymarket_cancel_order` | Cancel an open order |
 
-**Parameters:**
-- `order_id` (required): Order ID to cancel
+## API Exports
 
-#### `polymarket_get_trades`
-Get recent executed trades.
+```typescript
+// Main MCP server entry
+import mcp from 'mcp-polymarket';
 
-**Parameters:**
-- `limit` (optional): Number of trades to return (1-100, default: 20)
+// Client wrapper for Polymarket CLOB
+import { ClobClientWrapper } from 'mcp-polymarket/client';
+
+// Configuration utilities
+import { createConfig, loadConfig, Config } from 'mcp-polymarket/config';
+
+// Type definitions
+import { MarketInfo, OrderbookInfo, Position } from 'mcp-polymarket/types';
+```
 
 ## Security
 
 - Private keys are never logged
-- Use `POLYMARKET_READONLY=true` for safe market exploration
-- All output goes to stderr (MCP requirement)
+- Use `POLYMARKET_READONLY=true` for safe exploration
+- API credentials auto-derived from private key
 - Input validation on all parameters
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Build
+npm run build
+
+# Run tests
+npm test
+
+# Run E2E tests (requires env vars)
+npm run test:e2e
+```
+
+## Related
+
+- [@openclaw/polymarket](https://github.com/unsanction/openclaw-polymarket) - OpenClaw plugin using this library
 
 ## License
 

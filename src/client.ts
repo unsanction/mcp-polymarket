@@ -19,7 +19,8 @@ export class ClobClientWrapper {
       return;
     }
 
-    const wallet = new Wallet(this.config.privateKey);
+    // Cast to any to handle ethers version mismatch between our ethers and @polymarket/clob-client's ethers
+    const wallet = new Wallet(this.config.privateKey) as any;
     const funder = this.config.funder;
 
     // Signature type depends on wallet setup:
