@@ -19,8 +19,10 @@ export class ClobClientWrapper {
       return;
     }
 
-    // Cast to any to handle ethers version mismatch between our ethers and @polymarket/clob-client's ethers
+    // Create wallet and add ethers v5 compatibility shim
+    // @polymarket/clob-client expects _signTypedData (ethers v5), but ethers v6 uses signTypedData
     const wallet = new Wallet(this.config.privateKey) as any;
+    wallet._signTypedData = wallet.signTypedData.bind(wallet);
     const funder = this.config.funder;
 
     // Signature type depends on wallet setup:
