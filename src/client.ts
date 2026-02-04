@@ -9,11 +9,16 @@ export class ClobClientWrapper {
   private client: ClobClient | null = null;
   private config: Config;
 
-  constructor() {
-    this.config = getConfig();
+  constructor(config?: Config) {
+    this.config = config || getConfig();
   }
 
   async initialize(): Promise<void> {
+    // Skip if already initialized
+    if (this.client) {
+      return;
+    }
+
     const wallet = new Wallet(this.config.privateKey);
     const funder = this.config.funder;
 
@@ -37,7 +42,7 @@ export class ClobClientWrapper {
         signatureType,
         funder
       );
-      console.error("Initialized CLOB client with provided API credentials");
+      // Initialized with provided API credentials
     } else {
       // Create client with funder to properly derive API credentials
       const tempClient = new ClobClient(
@@ -52,7 +57,6 @@ export class ClobClientWrapper {
       try {
         // Try to derive or create API credentials
         const creds = await tempClient.createOrDeriveApiKey();
-        console.error("Derived API credentials from private key");
 
         this.client = new ClobClient(
           CLOB_API_URL,
@@ -62,8 +66,8 @@ export class ClobClientWrapper {
           signatureType,
           funder
         );
-      } catch (error) {
-        console.error("Failed to derive API credentials, using unauthenticated client");
+      } catch {
+        // Failed to derive API credentials, using unauthenticated client
         this.client = tempClient;
       }
     }

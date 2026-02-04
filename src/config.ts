@@ -18,9 +18,37 @@ function getEnvVar(name: string, required: boolean = false): string | undefined 
   return value;
 }
 
-function deriveAddressFromPrivateKey(privateKey: string): string {
+export function deriveAddressFromPrivateKey(privateKey: string): string {
   const wallet = new Wallet(privateKey);
   return wallet.address;
+}
+
+/**
+ * Create a Config from an object (useful for plugins that pass config directly)
+ */
+export function createConfig(options: {
+  privateKey: string;
+  funder?: string;
+  apiKey?: string;
+  apiSecret?: string;
+  passphrase?: string;
+  chainId?: number;
+  readonly?: boolean;
+}): Config {
+  const privateKey = options.privateKey;
+  if (!privateKey) {
+    throw new Error("privateKey is required");
+  }
+
+  return {
+    privateKey,
+    funder: options.funder || deriveAddressFromPrivateKey(privateKey),
+    apiKey: options.apiKey,
+    apiSecret: options.apiSecret,
+    passphrase: options.passphrase,
+    chainId: options.chainId || 137,
+    readonly: options.readonly || false,
+  };
 }
 
 export function loadConfig(): Config {

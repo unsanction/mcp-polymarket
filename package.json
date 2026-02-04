@@ -2,6 +2,13 @@
   "name": "mcp-polymarket",
   "version": "1.0.0",
   "type": "module",
+  "main": "./build/index.js",
+  "exports": {
+    ".": "./build/index.js",
+    "./client": "./build/client.js",
+    "./config": "./build/config.js",
+    "./types": "./build/types.js"
+  },
   "bin": {
     "mcp-polymarket": "./build/index.js"
   },
