@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { Side as ClobSide } from "@polymarket/clob-client";
+import { Side as ClobSide, OrderType } from "@polymarket/clob-client";
 import { ClobClientWrapper } from "../client.js";
 import { OrderResult, TradeInfo, Side } from "../types.js";
 
@@ -15,6 +15,16 @@ const PlaceOrderSchema = z.object({
     const num = parseFloat(val);
     return !isNaN(num) && num > 0 && num < 1;
   }, "Price must be between 0 and 1 (exclusive)"),
+});
+
+const PlaceMarketOrderSchema = z.object({
+  token_id: z.string().min(1),
+  side: z.enum(["BUY", "SELL"]),
+  amount: z.string().refine((val) => {
+    const num = parseFloat(val);
+    return !isNaN(num) && num > 0;
+  }, "Amount must be a positive number"),
+  order_type: z.enum(["FOK", "FAK"]).optional().default("FOK"),
 });
 
 const CancelOrderSchema = z.object({
@@ -53,14 +63,12 @@ async function getMarketInfoForToken(
 ): Promise<{ tickSize: number; negRisk: boolean }> {
   const client = clientWrapper.getClient();
   try {
-    // The CLOB client should have a method to get market info
     const marketInfo = (await client.getMarket(tokenId)) as RawMarketInfo;
     return {
       tickSize: marketInfo.minimum_tick_size || 0.01,
       negRisk: marketInfo.neg_risk || false,
     };
   } catch {
-    // Default values if we can't fetch market info
     return {
       tickSize: 0.01,
       negRisk: false,
@@ -125,7 +133,7 @@ export function registerTradingTools(
 
   // Only register write tools if not in readonly mode
   if (!includeWriteTools) {
-    console.error("Readonly mode: trading tools (place_order, cancel_order) disabled");
+    console.error("Readonly mode: trading tools (place_order, cancel_order, etc.) disabled");
     return;
   }
 
@@ -201,6 +209,81 @@ export function registerTradingTools(
   );
 
   server.tool(
+    "polymarket_place_market_order",
+    `Place a market order on Polymarket for immediate execution.
+
+CAUTION: This executes a REAL trade with REAL funds at market price!
+
+**Parameters:**
+- token_id: The token to trade
+- side: "BUY" or "SELL"
+- amount: For BUY — USD amount to spend. For SELL — number of shares to sell.
+- order_type: "FOK" (Fill or Kill, default) or "FAK" (Fill and Kill — allows partial fills)
+
+**Examples:**
+- BUY $10 worth of Yes tokens: side="BUY", amount="10"
+- SELL 5 shares at market: side="SELL", amount="5"`,
+    PlaceMarketOrderSchema.shape,
+    async (args) => {
+      try {
+        clientWrapper.ensureWriteAccess();
+
+        const { token_id, side, amount, order_type } = PlaceMarketOrderSchema.parse(args);
+        const client = clientWrapper.getClient();
+
+        const marketOrderType = order_type === "FAK" ? OrderType.FAK : OrderType.FOK;
+        const orderArgs = {
+          tokenID: token_id,
+          side: mapSide(side),
+          amount: parseFloat(amount),
+          orderType: marketOrderType as OrderType.FOK | OrderType.FAK,
+        };
+
+        const signedOrder = await client.createMarketOrder(orderArgs);
+        const response = (await client.postOrder(
+          signedOrder,
+          orderArgs.orderType,
+        )) as RawOrderResponse;
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(
+                {
+                  order_id: response.orderID || "",
+                  status: response.status || "unknown",
+                  message: response.errorMsg,
+                  order_details: {
+                    token_id,
+                    side,
+                    amount,
+                    order_type,
+                    type: "MARKET",
+                  },
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error placing market order: ${message}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
     "polymarket_cancel_order",
     "Cancel an existing order on Polymarket.",
     CancelOrderSchema.shape,
@@ -243,4 +326,5 @@ export function registerTradingTools(
       }
     }
   );
+
 }

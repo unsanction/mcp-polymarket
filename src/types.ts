@@ -33,6 +33,12 @@ export interface Position {
   avg_price: string;
   current_price: string;
   pnl: string;
+  pnl_percent: string;
+  redeemable: boolean;
+  mergeable: boolean;
+  condition_id: string;
+  slug: string;
+  end_date: string;
 }
 
 export interface TradeInfo {

@@ -4,6 +4,7 @@ import { getConfig, Config } from "./config.js";
 
 const CLOB_API_URL = "https://clob.polymarket.com";
 const GAMMA_API_URL = "https://gamma-api.polymarket.com";
+const DATA_API_URL = "https://data-api.polymarket.com";
 
 export class ClobClientWrapper {
   private client: ClobClient | null = null;
@@ -99,6 +100,10 @@ export class ClobClientWrapper {
 
   getClobApiUrl(): string {
     return CLOB_API_URL;
+  }
+
+  getDataApiUrl(): string {
+    return DATA_API_URL;
   }
 
   getFunder(): string {

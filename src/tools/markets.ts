@@ -10,7 +10,8 @@ const GetMarketsSchema = z.object({
 });
 
 const GetMarketSchema = z.object({
-  condition_id: z.string().min(1),
+  condition_id: z.string().optional(),
+  slug: z.string().optional(),
 });
 
 interface GammaMarket {
@@ -76,6 +77,27 @@ async function fetchGammaMarket(
   return await response.json() as GammaMarket;
 }
 
+async function fetchGammaMarketBySlug(
+  clientWrapper: ClobClientWrapper,
+  slug: string
+): Promise<GammaMarket | null> {
+  const baseUrl = clientWrapper.getGammaApiUrl();
+  const params = new URLSearchParams({
+    slug: slug,
+    limit: "1",
+  });
+  const url = `${baseUrl}/markets?${params.toString()}`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch market by slug: ${response.statusText}`);
+  }
+
+  const data = await response.json() as GammaMarket[];
+  if (!Array.isArray(data) || data.length === 0) return null;
+  return data[0];
+}
+
 function formatMarket(market: GammaMarket): MarketInfo {
   const tokens = [];
   const outcomes = market.outcomes || ["Yes", "No"];
@@ -137,19 +159,40 @@ export function registerMarketTools(server: McpServer, clientWrapper: ClobClient
 
   server.tool(
     "polymarket_get_market",
-    "Get detailed information about a specific prediction market including token IDs, current prices, and market status.",
+    `Get detailed information about a specific prediction market including token IDs, current prices, and market status.
+
+Provide either condition_id or slug to look up a market.`,
     GetMarketSchema.shape,
     async (args) => {
       try {
-        const { condition_id } = GetMarketSchema.parse(args);
-        const market = await fetchGammaMarket(clientWrapper, condition_id);
+        const { condition_id, slug } = GetMarketSchema.parse(args);
+
+        if (!condition_id && !slug) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Either condition_id or slug is required",
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        let market: GammaMarket | null = null;
+
+        if (condition_id) {
+          market = await fetchGammaMarket(clientWrapper, condition_id);
+        } else if (slug) {
+          market = await fetchGammaMarketBySlug(clientWrapper, slug);
+        }
 
         if (!market) {
           return {
             content: [
               {
                 type: "text" as const,
-                text: `Market not found: ${condition_id}`,
+                text: `Market not found: ${condition_id || slug}`,
               },
             ],
             isError: true,
