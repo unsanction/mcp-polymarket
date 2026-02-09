@@ -4,6 +4,7 @@ import { registerMarketTools } from "./markets.js";
 import { registerOrderbookTools } from "./orderbook.js";
 import { registerAccountTools } from "./account.js";
 import { registerTradingTools } from "./trading.js";
+import { registerNewsTools } from "./news.js";
 
 export function registerAllTools(server: McpServer, clientWrapper: ClobClientWrapper): void {
   const isReadonly = clientWrapper.isReadonly();
@@ -14,6 +15,7 @@ export function registerAllTools(server: McpServer, clientWrapper: ClobClientWra
   registerMarketTools(server, clientWrapper);
   registerOrderbookTools(server, clientWrapper);
   registerAccountTools(server, clientWrapper);
+  registerNewsTools(server);
 
   // Register trading tools (write tools are conditionally included)
   registerTradingTools(server, clientWrapper, !isReadonly);

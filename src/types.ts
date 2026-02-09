@@ -7,11 +7,16 @@ export interface TokenInfo {
 export interface MarketInfo {
   condition_id: string;
   question: string;
+  slug?: string;
+  url?: string;
+  description?: string;
   tokens: TokenInfo[];
   volume: string;
+  liquidity?: number;
   end_date: string;
   active: boolean;
   closed: boolean;
+  accepting_orders?: boolean;
 }
 
 export interface OrderbookEntry {

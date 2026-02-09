@@ -12,6 +12,7 @@ const GetMarketsSchema = z.object({
 const GetMarketSchema = z.object({
   condition_id: z.string().optional(),
   slug: z.string().optional(),
+  url: z.string().optional(),
 });
 
 interface GammaMarket {
@@ -19,16 +20,32 @@ interface GammaMarket {
   question: string;
   slug: string;
   volume: string;
+  volumeNum?: number;
+  liquidityNum?: number;
   endDate: string;
+  endDateIso?: string;
+  description?: string;
   active: boolean;
   closed: boolean;
-  clobTokenIds?: string[];
-  outcomes?: string[];
-  outcomePrices?: string[];
+  acceptingOrders?: boolean;
+  clobTokenIds?: string[] | string;
+  outcomes?: string[] | string;
+  outcomePrices?: string[] | string;
 }
 
-interface GammaResponse {
-  data?: GammaMarket[];
+/**
+ * Gamma API sometimes returns array fields as JSON strings instead of arrays.
+ * e.g. clobTokenIds: '["abc","def"]' instead of ["abc","def"]
+ */
+function ensureArray(val: unknown): string[] {
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string") {
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) return parsed;
+    } catch { /* not valid JSON */ }
+  }
+  return [];
 }
 
 async function fetchGammaMarkets(
@@ -42,6 +59,8 @@ async function fetchGammaMarkets(
     limit: limit.toString(),
     offset: offset.toString(),
     active: "true",
+    order: "volume24hr",
+    ascending: "false",
   });
 
   if (search) {
@@ -98,16 +117,28 @@ async function fetchGammaMarketBySlug(
   return data[0];
 }
 
+/**
+ * Extract a Polymarket event slug from a URL.
+ * Handles: https://polymarket.com/event/slug, polymarket.com/event/slug?params, raw slug
+ */
+function extractSlugFromUrl(url: string): string {
+  const match = url.match(/(?:polymarket\.com\/event\/)([^/?#]+)/);
+  return match ? match[1] : url.replace(/^\/+/, "");
+}
+
 function formatMarket(market: GammaMarket): MarketInfo {
   const tokens = [];
-  const outcomes = market.outcomes || ["Yes", "No"];
-  const prices = market.outcomePrices || [];
-  const tokenIds = market.clobTokenIds || [];
+  const outcomes = ensureArray(market.outcomes);
+  const prices = ensureArray(market.outcomePrices);
+  const tokenIds = ensureArray(market.clobTokenIds);
 
-  for (let i = 0; i < outcomes.length; i++) {
+  // Fall back to ["Yes", "No"] if no outcomes
+  const outcomeNames = outcomes.length > 0 ? outcomes : ["Yes", "No"];
+
+  for (let i = 0; i < outcomeNames.length; i++) {
     tokens.push({
       token_id: tokenIds[i] || "",
-      outcome: outcomes[i],
+      outcome: outcomeNames[i],
       price: prices[i] ? parseFloat(prices[i]) : 0,
     });
   }
@@ -115,18 +146,23 @@ function formatMarket(market: GammaMarket): MarketInfo {
   return {
     condition_id: market.conditionId,
     question: market.question,
+    slug: market.slug,
+    url: market.slug ? `https://polymarket.com/event/${market.slug}` : undefined,
+    description: market.description ? market.description.slice(0, 500) : undefined,
     tokens,
     volume: market.volume || "0",
-    end_date: market.endDate || "",
+    liquidity: market.liquidityNum,
+    end_date: market.endDateIso || market.endDate || "",
     active: market.active,
     closed: market.closed,
+    accepting_orders: market.acceptingOrders,
   };
 }
 
 export function registerMarketTools(server: McpServer, clientWrapper: ClobClientWrapper): void {
   server.tool(
     "polymarket_get_markets",
-    "List available prediction markets on Polymarket. Returns market question, current prices for Yes/No outcomes, and trading volume.",
+    "List available prediction markets on Polymarket, sorted by volume. Returns market question, current prices for Yes/No outcomes, token IDs, volume, liquidity, and Polymarket URL.",
     GetMarketsSchema.shape,
     async (args) => {
       try {
@@ -159,20 +195,25 @@ export function registerMarketTools(server: McpServer, clientWrapper: ClobClient
 
   server.tool(
     "polymarket_get_market",
-    `Get detailed information about a specific prediction market including token IDs, current prices, and market status.
+    `Get detailed information about a specific prediction market including token IDs, current prices, description, liquidity, and market status.
 
-Provide either condition_id or slug to look up a market.`,
+Provide one of: condition_id, slug, or a full Polymarket URL (e.g. https://polymarket.com/event/btc-updown-15m-1770647400).`,
     GetMarketSchema.shape,
     async (args) => {
       try {
-        const { condition_id, slug } = GetMarketSchema.parse(args);
+        let { condition_id, slug, url } = GetMarketSchema.parse(args);
+
+        // Extract slug from URL if provided
+        if (url) {
+          slug = extractSlugFromUrl(url);
+        }
 
         if (!condition_id && !slug) {
           return {
             content: [
               {
                 type: "text" as const,
-                text: "Either condition_id or slug is required",
+                text: "Provide one of: condition_id, slug, or url",
               },
             ],
             isError: true,

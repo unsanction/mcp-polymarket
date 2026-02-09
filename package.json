@@ -1,6 +1,6 @@
 {
   "name": "@c0pilot/mcp-polymarket",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "MCP server and client library for Polymarket prediction markets - trade, browse markets, manage positions",
   "type": "module",
   "main": "./build/index.js",
